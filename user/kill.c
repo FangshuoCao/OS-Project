@@ -2,6 +2,8 @@
 #include "kernel/stat.h"
 #include "user/user.h"
 
+//unix kill command
+//terminate processes with the given pids
 int
 main(int argc, char **argv)
 {

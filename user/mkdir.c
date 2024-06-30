@@ -2,6 +2,9 @@
 #include "kernel/stat.h"
 #include "user/user.h"
 
+//unix mkdir command
+//create a new directory
+
 int
 main(int argc, char *argv[])
 {

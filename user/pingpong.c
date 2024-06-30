@@ -23,7 +23,6 @@ main(int argc, char *argv[]){
         close(p2c[1]);
         close(c2p[0]);
 
-        int pid = getpid();
         char buf;
         read(p2c[0], &buf, 1);
         fprintf(1, "%d: received ping\n", getpid());

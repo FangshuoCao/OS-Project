@@ -44,7 +44,7 @@ main(int argc, char *argv[]){
     if(fork() != 0){
         close(pf[0]);
         for(int i = 2; i <= 35; i++){
-            write(pf[1], i, sizeof(i));
+            write(pf[1], &i, sizeof(i));
         }
         close(pf[1]);   //close the write end after writing all numbers
         wait(0);    //wait for child

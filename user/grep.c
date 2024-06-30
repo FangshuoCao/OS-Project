@@ -1,4 +1,6 @@
 // Simple grep.  Only supports ^ . * $ operators.
+//grep stands for: "Global Regular Expression Print"
+//search through contents of files and output lines that match a specific pattern
 
 #include "kernel/types.h"
 #include "kernel/stat.h"
@@ -10,25 +12,25 @@ int match(char*, char*);
 void
 grep(char *pattern, int fd)
 {
-  int n, m;
+  int n, m; //n: number of bytes read, m: number of valid bytes in the buffer
   char *p, *q;
 
   m = 0;
   while((n = read(fd, buf+m, sizeof(buf)-m-1)) > 0){
     m += n;
-    buf[m] = '\0';
+    buf[m] = '\0';  //make the buffer a valid string for string functions
     p = buf;
-    while((q = strchr(p, '\n')) != 0){
-      *q = 0;
+    while((q = strchr(p, '\n')) != 0){  //find the next newline char in the buffer
+      *q = 0; //temporarily null terminate the current line, in order to compare with pattern
       if(match(pattern, p)){
-        *q = '\n';
+        *q = '\n';  //restore the current line and write to output
         write(1, p, q+1 - p);
       }
       p = q+1;
     }
-    if(m > 0){
-      m -= p - buf;
-      memmove(buf, p, m);
+    if(m > 0){  //if there is a partial line
+      m -= p - buf; //update m to the number of bytes remaining in the buffer
+      memmove(buf, p, m); //moves the remaining bytes to the start of the buffer
     }
   }
 }

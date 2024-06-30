@@ -176,6 +176,7 @@ mkfs/mkfs: mkfs/mkfs.c $K/fs.h $K/param.h
 # http://www.gnu.org/software/make/manual/html_node/Chained-Rules.html
 .PRECIOUS: %.o
 
+#list of user programs, add your program here when you finish
 UPROGS=\
 	$U/_cat\
 	$U/_echo\
@@ -193,6 +194,7 @@ UPROGS=\
 	$U/_grind\
 	$U/_wc\
 	$U/_zombie\
+	$U/_sleep\
 
 
 

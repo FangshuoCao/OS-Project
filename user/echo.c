@@ -2,8 +2,6 @@
 #include "kernel/stat.h"
 #include "user/user.h"
 
-//unix echo command
-//write arguments passed to it to the standard output
 int
 main(int argc, char *argv[])
 {

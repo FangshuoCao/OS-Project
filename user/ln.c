@@ -2,9 +2,6 @@
 #include "kernel/stat.h"
 #include "user/user.h"
 
-//unit ln command
-//create a hard link between two files
-//a hard link is an additional name for an existing file on the file system
 int
 main(int argc, char *argv[])
 {

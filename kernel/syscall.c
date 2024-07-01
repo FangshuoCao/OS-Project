@@ -171,7 +171,7 @@ syscall(void)
     p->trapframe->a0 = syscalls[num]();
 
     //check if we are tracing this system call
-    if((p->tracing_syscall >> num) == 1){
+    if((p->tracing_syscall >> num) & 1){
       printf("%d: syscall %s -> %d\n", p->pid, syscall_names[num], p->trapframe->a0);
     }
   } else {

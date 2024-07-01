@@ -66,8 +66,9 @@ find(char *path, char *target)
 
 int
 main(int argc, char *argv[]){
-    if(argc <= 2){
+    if(argc < 3){
         fprintf(2, "usage: find <path> <target>\n");
+        exit(1);
     }
     char target[512];
     target[0] = '/';

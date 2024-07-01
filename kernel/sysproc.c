@@ -95,3 +95,15 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+//trace system call used
+//print syscall name and their return value
+uint64
+sys_trace(void)
+{
+  int bitmask;  //bit mask for tracing system call, if a bit is set to 1, then we trace that system call
+  if(argint(0, &bitmask) < 0) //bit mask cannot be negative
+    return -1;  
+  myproc()->tracing_syscall = bitmask;  //set the attribute of current process to the mask
+  return 0;
+}

@@ -141,6 +141,8 @@ found:
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
 
+  p->tracing_syscall = 0; //default tracing_sycall is 0, we are not tracing any system call
+
   return p;
 }
 
@@ -302,6 +304,8 @@ fork(void)
   np->cwd = idup(p->cwd);
 
   safestrcpy(np->name, p->name, sizeof(p->name));
+
+  np->tracing_syscall = p->tracing_syscall; //child should inherit tracing attribute from parent
 
   pid = np->pid;
 

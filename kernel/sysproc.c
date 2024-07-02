@@ -1,3 +1,5 @@
+//system calls related to process
+
 #include "types.h"
 #include "riscv.h"
 #include "defs.h"
@@ -6,6 +8,7 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "sysinfo.h"
 
 uint64
 sys_exit(void)
@@ -105,5 +108,22 @@ sys_trace(void)
   if(argint(0, &bitmask) < 0) //bit mask cannot be negative
     return -1;  
   myproc()->tracing_syscall = bitmask;  //set the attribute of current process to the mask
+  return 0;
+}
+
+//fill the sysinfo struct
+uint64
+sys_sysinfo(void){
+  uint64 addr;
+  if(argaddr(0, &addr) < 0){
+    return -1;
+  }
+  struct sysinfo info;
+  info.freemem = amount_of_free_memory();
+  info.nproc = numproc();
+
+  if(copyout(myproc()->pagetable, addr, (char *)&info, sizeof(info)) < 0){
+    return -1;
+  }
   return 0;
 }

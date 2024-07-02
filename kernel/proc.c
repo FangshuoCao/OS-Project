@@ -146,6 +146,21 @@ found:
   return p;
 }
 
+//collect the number of processes
+//for lab2-sysinfo
+static int
+numproc(void){
+  int cnt = 0;
+  struct proc *p;
+  for(p = proc; p < &proc[NPROC]; p++){
+    if(p->state != UNUSED){
+      cnt++;
+    }
+  }
+  return cnt;
+}
+
+
 // free a proc structure and the data hanging from it,
 // including user pages.
 // p->lock must be held.

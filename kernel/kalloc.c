@@ -14,32 +14,41 @@ void freerange(void *pa_start, void *pa_end);
 extern char end[]; // first address after kernel.
                    // defined by kernel.ld.
 
+//a linked list of free memory pages
 struct run {
   struct run *next;
 };
 
+//used by kernel to manage free physical memory pages
+//keep track of which pages of memory are available and ensure that
+//access to the list is synchronized across multiple threads using the spinlock
 struct {
   struct spinlock lock;
   struct run *freelist;
 } kmem;
 
+//initialize the memory allocator
 void
 kinit()
 {
   initlock(&kmem.lock, "kmem");
-  freerange(end, (void*)PHYSTOP);
+  //free the entire physical memory except the space for kernel
+  freerange(end, (void*)PHYSTOP); //PHYSTOP: end of the physical memory
 }
 
+//free the memory starting from pa_start and end at pa_end
 void
 freerange(void *pa_start, void *pa_end)
 {
   char *p;
+   //round up the start address to the nearest page boundary
   p = (char*)PGROUNDUP((uint64)pa_start);
+  //itereate over each page between the range and free them
   for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE)
-    kfree(p);
+    kfree(p); //free the page
 }
 
-// Free the page of physical memory pointed at by v,
+// Free the page of physical memory pointed at by pa,
 // which normally should have been returned by a
 // call to kalloc().  (The exception is when
 // initializing the allocator; see kinit above.)
@@ -47,18 +56,18 @@ void
 kfree(void *pa)
 {
   struct run *r;
-
+  //pa must be a page boundary, above kernel space, and below end of physical memory
   if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
     panic("kfree");
 
   // Fill with junk to catch dangling refs.
   memset(pa, 1, PGSIZE);
 
-  r = (struct run*)pa;
+  r = (struct run*)pa;  //cast to pointer so we can append to linkedlist  
 
   acquire(&kmem.lock);
-  r->next = kmem.freelist;
-  kmem.freelist = r;
+  r->next = kmem.freelist;  //append freed page to head of list
+  kmem.freelist = r;  //update head of list
   release(&kmem.lock);
 }
 
@@ -71,12 +80,26 @@ kalloc(void)
   struct run *r;
 
   acquire(&kmem.lock);
-  r = kmem.freelist;
+  r = kmem.freelist;  //allocate the head of list
   if(r)
-    kmem.freelist = r->next;
+    kmem.freelist = r->next;  //update heaed of list
   release(&kmem.lock);
 
   if(r)
     memset((char*)r, 5, PGSIZE); // fill with junk
   return (void*)r;
+}
+
+//lab2-sysinfo
+int
+amount_of_free_memory(void){
+  acquire(&kmem.lock);
+  int free_memory = 0;
+  struct run *r = kmem.freelist;
+  while(r){
+    free_memory += PGSIZE;
+    r = r->next;
+  }
+  release(&kmem.lock);
+  return free_memory;
 }

@@ -148,7 +148,7 @@ found:
 
 //collect the number of processes
 //for lab2-sysinfo
-static int
+int
 numproc(void){
   int cnt = 0;
   struct proc *p;

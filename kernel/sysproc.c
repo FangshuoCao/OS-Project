@@ -82,16 +82,16 @@ sys_pgaccess(void)
 {
   // lab3-3
   //define the three parameter
-  unit64 addr;
+  uint64 addr;
   int numpages;
-  int *bitmask;
+  int bitmask;
 
   //read the parameters from user space
   if(argaddr(0, &addr) < 0)
     return -1;
   if(argint(1, &numpages) < 0)
     return -1;
-  if(argaddr(2, bitmask) < 0)
+  if(argint(2, &bitmask) < 0)
     return -1;
 
   //set a upper bound for number of pages to test

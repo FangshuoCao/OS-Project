@@ -295,6 +295,7 @@ freewalk(pagetable_t pagetable)
   // there are 2^9 = 512 PTEs in a page table.
   for(int i = 0; i < 512; i++){
     pte_t pte = pagetable[i];
+    //if none of R, W, and X are set, then this PTE is not a leaf
     if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X)) == 0){
       // this PTE points to a lower-level page table.
       uint64 child = PTE2PA(pte);
@@ -456,5 +457,37 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
     return 0;
   } else {
     return -1;
+  }
+}
+
+void
+vmprint(pagetable_t pagetable, uint64 depth){
+  if(depth >2){
+    return;
+  }
+  if(depth == 0){
+    //first print the argument to vmprint
+    printf("page table %p\n", pagetable);
+  }
+  
+  for(int i = 0; i < 512; i++){
+    pte_t pte = pagetable[i];
+    if(pte & PTE_V){
+      switch (depth)
+      {
+      case 0:
+        printf("..");
+        break;
+      case 1:
+        printf(".. ..");
+        break;
+      case 2:
+        printf(".. .. ..");
+        break;
+      }
+      printf("%d: pte %p pa %p\n", i, pte, PTE2PA(pte));
+      uint64 child = PTE2PA(pte);
+      vmprint((pagetable_t) child, depth + 1);
+    }
   }
 }

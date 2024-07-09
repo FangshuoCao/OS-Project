@@ -8,8 +8,12 @@
 
 /*
  * the kernel's page table.
+ * codes for manipulating address spaces and page tables
+ * function starts with kvm: manage kernel page table
+ * function starts with uvm: manage user page table
+ * other functions are used for both
  */
-pagetable_t kernel_pagetable;
+pagetable_t kernel_pagetable; //a pointer to a RISC-V root page-table page, can be either kernel or process pgtbl
 
 extern char etext[];  // kernel.ld sets this to end of kernel code.
 
@@ -21,9 +25,11 @@ kvmmake(void)
 {
   pagetable_t kpgtbl;
 
+  //allocate a page of physical memory to hold the root page-table page
   kpgtbl = (pagetable_t) kalloc();
   memset(kpgtbl, 0, PGSIZE);
 
+  //using these kvmmap to install the translations that the kernel needs
   // uart registers
   kvmmap(kpgtbl, UART0, UART0, PGSIZE, PTE_R | PTE_W);
 
@@ -43,7 +49,7 @@ kvmmake(void)
   // the highest virtual address in the kernel.
   kvmmap(kpgtbl, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
 
-  // map kernel stacks
+  // map kernel stacks, allocates a kernel stack for each processes
   proc_mapstacks(kpgtbl);
   
   return kpgtbl;
@@ -56,18 +62,21 @@ kvminit(void)
   kernel_pagetable = kvmmake();
 }
 
+//main() calls this to install the kernel page table
 // Switch h/w page table register to the kernel's page table,
-// and enable paging.
+// and ENABLES PAGING
 void
 kvminithart()
 {
+  //write the address of root page-table page to satp
   w_satp(MAKE_SATP(kernel_pagetable));
-  sfence_vma();
+  sfence_vma(); //flushes the current CPU's TLB
 }
 
+//mimics the RISC-V paging hardware as it looks up the PTE for a virtual address
 // Return the address of the PTE in page table pagetable
-// that corresponds to virtual address va.  If alloc!=0,
-// create any required page-table pages.
+// that corresponds to virtual address va.
+// alloc indicates whether to allocate new page-table pages if they do not already exist
 //
 // The risc-v Sv39 scheme has three levels of page-table
 // pages. A page-table page contains 512 64-bit PTEs.
@@ -80,20 +89,29 @@ kvminithart()
 pte_t *
 walk(pagetable_t pagetable, uint64 va, int alloc)
 {
-  if(va >= MAXVA)
+  if(va >= MAXVA) //out of bound
     panic("walk");
 
   for(int level = 2; level > 0; level--) {
+    //extract from va the index for the given level of page table
     pte_t *pte = &pagetable[PX(level, va)];
-    if(*pte & PTE_V) {
+
+    if(*pte & PTE_V) {  //if current PTE is valid
+      //set pagetable to the physical address of next level page table
       pagetable = (pagetable_t)PTE2PA(*pte);
     } else {
+      //if alloc is 0 or kalloc() fail
       if(!alloc || (pagetable = (pde_t*)kalloc()) == 0)
         return 0;
+      //if alloc is set, allocates a new page-table page and put its physical address in the PTE
       memset(pagetable, 0, PGSIZE);
+
+      //Update the current PTE to point to the newly allocated page-table page and mark it as valid
+      //thus ready to traverse to the next level of page table
       *pte = PA2PTE(pagetable) | PTE_V;
     }
   }
+  //return the physical address the PTE at lowest level points to
   return &pagetable[PX(0, va)];
 }
 
@@ -143,17 +161,21 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
   if(size == 0)
     panic("mappages: size");
   
-  a = PGROUNDDOWN(va);
+  a = PGROUNDDOWN(va);  //round down to nearest page boundary(alignment)
   last = PGROUNDDOWN(va + size - 1);
-  for(;;){
-    if((pte = walk(pagetable, a, 1)) == 0)
+  for(;;){  //loop through each page between a and last
+    //walk() get the PTE for current address a
+    if((pte = walk(pagetable, a, 1)) == 0)  //walk() fails to allocate a needed page-table page
       return -1;
-    if(*pte & PTE_V)
+    if(*pte & PTE_V)  //current pgtbl is valid(already mapped)
       panic("mappages: remap");
-    *pte = PA2PTE(pa) | perm | PTE_V;
-    if(a == last)
+
+    *pte = PA2PTE(pa) | perm | PTE_V; //set up PTE
+
+    if(a == last) //last page reached
       break;
-    a += PGSIZE;
+  
+    a += PGSIZE;  //move to next page
     pa += PGSIZE;
   }
   return 0;
@@ -224,23 +246,27 @@ uvmalloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
   uint64 a;
 
   if(newsz < oldsz)
-    return oldsz;
+    return oldsz; //does nothing because this function does not handle shrinking
 
   oldsz = PGROUNDUP(oldsz);
   for(a = oldsz; a < newsz; a += PGSIZE){
     mem = kalloc();
-    if(mem == 0){
-      uvmdealloc(pagetable, a, oldsz);
+    if(mem == 0){ //is kalloc fails
+      uvmdealloc(pagetable, a, oldsz);  //free any previous allocated page
       return 0;
     }
-    memset(mem, 0, PGSIZE);
+    memset(mem, 0, PGSIZE); //fill newly allocated page with 0
+
+    //map allocated physical memory to virtual address a
     if(mappages(pagetable, a, PGSIZE, (uint64)mem, PTE_W|PTE_X|PTE_R|PTE_U) != 0){
-      kfree(mem);
-      uvmdealloc(pagetable, a, oldsz);
+      //if mapping failed
+      kfree(mem); //frees the allocated memory
+      uvmdealloc(pagetable, a, oldsz);  //free previously allocated pages
       return 0;
     }
   }
-  return newsz;
+  //all kalloc() and mappages() are successful
+  return newsz; 
 }
 
 // Deallocate user pages to bring the process size from oldsz to
@@ -251,11 +277,11 @@ uint64
 uvmdealloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
 {
   if(newsz >= oldsz)
-    return oldsz;
+    return oldsz; //does nothing because this function does not handle growing
 
-  if(PGROUNDUP(newsz) < PGROUNDUP(oldsz)){
-    int npages = (PGROUNDUP(oldsz) - PGROUNDUP(newsz)) / PGSIZE;
-    uvmunmap(pagetable, PGROUNDUP(newsz), npages, 1);
+  if(PGROUNDUP(newsz) < PGROUNDUP(oldsz)){  //if they do not round up to the same boundary
+    int npages = (PGROUNDUP(oldsz) - PGROUNDUP(newsz)) / PGSIZE;  //how many pages need to be freed
+    uvmunmap(pagetable, PGROUNDUP(newsz), npages, 1); //unmap those pages
   }
 
   return newsz;

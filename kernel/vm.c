@@ -127,14 +127,14 @@ walkaddr(pagetable_t pagetable, uint64 va)
   if(va >= MAXVA)
     return 0;
 
-  pte = walk(pagetable, va, 0);
-  if(pte == 0)
+  pte = walk(pagetable, va, 0); //find the PTE in the bottom level pagetable
+  if(pte == 0)  //walk failed
     return 0;
-  if((*pte & PTE_V) == 0)
+  if((*pte & PTE_V) == 0) //invalid PTE
     return 0;
-  if((*pte & PTE_U) == 0)
+  if((*pte & PTE_U) == 0) //PTE not for user
     return 0;
-  pa = PTE2PA(*pte);
+  pa = PTE2PA(*pte);  //translate PTE to physical address
   return pa;
 }
 
@@ -462,32 +462,48 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 
 void
 vmprint(pagetable_t pagetable, uint64 depth){
-  if(depth >2){
+  if(depth > 2){ //there's only 3 level
     return;
   }
-  if(depth == 0){
-    //first print the argument to vmprint
+  if(depth == 0){ //first print the argument to vmprint(which is the root)
     printf("page table %p\n", pagetable);
   }
   
   for(int i = 0; i < 512; i++){
     pte_t pte = pagetable[i];
-    if(pte & PTE_V){
-      switch (depth)
-      {
-      case 0:
-        printf("..");
-        break;
-      case 1:
-        printf(".. ..");
-        break;
-      case 2:
-        printf(".. .. ..");
-        break;
+    if(pte & PTE_V){  //only print PTE that is valid
+      switch (depth){ //print .. based on level
+        case 0:
+          printf("..");
+          break;
+        case 1:
+          printf(".. ..");
+          break;
+        case 2:
+          printf(".. .. ..");
+          break;
       }
-      printf("%d: pte %p pa %p\n", i, pte, PTE2PA(pte));
-      uint64 child = PTE2PA(pte);
+      printf("%d: pte %p pa %p\n", i, pte, PTE2PA(pte));  //print info
+      uint64 child = PTE2PA(pte); //address of the root of next level
       vmprint((pagetable_t) child, depth + 1);
     }
   }
+}
+
+
+int
+accessed_page(pagetable_t pagetable, uint64 va){
+  pte_t *pte;
+  uint64 pa;
+
+  if(va >= MAXVA)
+    return 0;
+  pte = walk(pagetable, va, 0); //find the physical address of cur page
+  if(pte == 0)
+    return 0;
+  if((*pte & PTE_A) != 0){  //if the page is accessed
+    *pte &= ~PTE_A; //set access flag to 0
+    return 1;
+  }
+  return 0;  
 }

@@ -80,7 +80,40 @@ sys_sleep(void)
 int
 sys_pgaccess(void)
 {
-  // lab pgtbl: your code here.
+  // lab3-3
+  //define the three parameter
+  unit64 addr;
+  int numpages;
+  int *bitmask;
+
+  //read the parameters from user space
+  if(argaddr(0, &addr) < 0)
+    return -1;
+  if(argint(1, &numpages) < 0)
+    return -1;
+  if(argaddr(2, bitmask) < 0)
+    return -1;
+
+  //set a upper bound for number of pages to test
+  if(numpages < 0 || numpages > 32){
+    return -1;
+  }
+
+  struct proc *p = myproc();
+  int ans = 0x0;
+
+  for(int i = 0; i < 32; i++){
+    int va = addr + i * PGSIZE; //next page to check
+    if(accessed_page(p->pagetable, va)){
+      ans |= (1 << i); //if the page is accessed, set the ith bit in bitmask
+    }
+  }
+
+  //copy bitmask to user space
+  if(copyout(p->pagetable, bitmask, (char*) &ans, sizeof(ans)) < 0){
+    return -1;
+  }
+
   return 0;
 }
 #endif

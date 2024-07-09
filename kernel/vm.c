@@ -494,7 +494,6 @@ vmprint(pagetable_t pagetable, uint64 depth){
 int
 accessed_page(pagetable_t pagetable, uint64 va){
   pte_t *pte;
-  uint64 pa;
 
   if(va >= MAXVA)
     return 0;

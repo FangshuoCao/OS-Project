@@ -25,10 +25,17 @@ uservec:
         #
         
 	# swap a0 and sscratch
-        # so that a0 is TRAPFRAME
+        # so that address in a0 points to TRAPFRAME
         csrrw a0, sscratch, a0
 
         # save the user registers in TRAPFRAME
+        # RISC-V sd instruction syntax:
+        # sd src_register, offset(address)
+        # the sd command store a 64 bit value from a source register into memory
+        # for example, in the first line:
+        # ra is the src register
+        # 40(a0) specifies an offset of 40 bytes from the base address contained in a0 register
+
         sd ra, 40(a0)
         sd sp, 48(a0)
         sd gp, 56(a0)
@@ -38,6 +45,7 @@ uservec:
         sd t2, 88(a0)
         sd s0, 96(a0)
         sd s1, 104(a0)
+        #note: here you can find that we skip a0 and offset 112
         sd a1, 120(a0)
         sd a2, 128(a0)
         sd a3, 136(a0)

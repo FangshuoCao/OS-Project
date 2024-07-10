@@ -50,8 +50,7 @@ usertrap(void)
   // save user program counter.
   p->trapframe->epc = r_sepc();
   
-  if(r_scause() == 8){
-    // system call
+  if(r_scause() == 8){  //the trap is a system call
 
     if(p->killed)
       exit(-1);
@@ -64,19 +63,21 @@ usertrap(void)
     // so don't enable until done with those registers.
     intr_on();
 
-    syscall();
-  } else if((which_dev = devintr()) != 0){
+    syscall();  //syscall() handles all system calls
+
+  } else if((which_dev = devintr()) != 0){  //the trap is a device interrupt
     // ok
-  } else {
+  } else {  //the trap is an exception
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
-    p->killed = 1;
+    p->killed = 1;  //kill the faulting process
   }
 
   if(p->killed)
     exit(-1);
 
   // give up the CPU if this is a timer interrupt.
+  //(for example, a timer interrupt will happen when the scheduler preempt a process)
   if(which_dev == 2)
     yield();
 
@@ -134,6 +135,7 @@ void
 kerneltrap()
 {
   int which_dev = 0;
+  //save these registers because we may call yield, which may disturb these registers
   uint64 sepc = r_sepc();
   uint64 sstatus = r_sstatus();
   uint64 scause = r_scause();
@@ -143,6 +145,8 @@ kerneltrap()
   if(intr_get() != 0)
     panic("kerneltrap: interrupts enabled");
 
+  //if the trap is a device interrupt, handle it
+  //if not, the trap can only be a kernel interrupt, which is fatal, so kernel will panic
   if((which_dev = devintr()) == 0){
     printf("scause %p\n", scause);
     printf("sepc=%p stval=%p\n", r_sepc(), r_stval());

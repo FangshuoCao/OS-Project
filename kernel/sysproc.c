@@ -55,6 +55,8 @@ sys_sbrk(void)
 uint64
 sys_sleep(void)
 {
+  backtrace();  //lab4-2 print stack
+
   int n;
   uint ticks0;
 

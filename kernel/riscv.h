@@ -245,6 +245,15 @@ r_stval()
   return x;
 }
 
+//lab4-2: retrieve value from register s0(frame pointer)
+static inline uint64
+r_fp()
+{
+  uint64 x;
+  asm volatile("mv %0, s0" : "=r" (x) );
+  return x;
+}
+
 // Machine-mode Counter-Enable
 static inline void 
 w_mcounteren(uint64 x)

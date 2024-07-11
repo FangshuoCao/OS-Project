@@ -132,3 +132,19 @@ printfinit(void)
   initlock(&pr.lock, "pr");
   pr.locking = 1;
 }
+
+//lab4-2
+void
+backtrace(void){
+  uint64 fp = r_fp(); //retrieve current fp
+
+  //xv6 allocate one page for each stack,
+  //thus if fp become the boundary of the page, we finish the entire stack
+	while (fp != PGROUNDUP(fp)) {
+    //return address live at fp-8
+    uint64 ra = *(uint64 *)(fp - 8);
+    printf("%p\n", (void *)ra);
+    //saved fp(previous fp) live at fp-16
+		fp = *(uint64 *)(fp - 16);
+	}
+}

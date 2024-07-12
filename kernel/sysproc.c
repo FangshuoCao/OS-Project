@@ -117,7 +117,7 @@ sys_sigalarm(void) {
 uint64
 sys_sigreturn(void) {
   struct proc *p = myproc();
-  *p->trapframe = *p->prev_trapframe;
-  p->running_handler = 0;
+  *p->trapframe = *p->prev_trapframe; //restore original registers
+  p->running_handler = 0;   //reset running_handler
 	return 0;
 }

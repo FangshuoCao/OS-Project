@@ -163,6 +163,7 @@ freeproc(struct proc *p)
   if(p->trapframe)
     kfree((void*)p->trapframe);
   p->trapframe = 0;
+  
   if(p->prev_trapframe)
     kfree((void*)p->prev_trapframe);
   p->prev_trapframe = 0;

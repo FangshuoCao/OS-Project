@@ -78,8 +78,21 @@ usertrap(void)
 
   // give up the CPU if this is a timer interrupt.
   //(for example, a timer interrupt will happen when the scheduler preempt a process)
-  if(which_dev == 2)
+  if(which_dev == 2){
+    //lab4-3
+    if(p->numticks > 0){  //if alarm is set
+      p->ticks_passed++;  //one tick passed
+      if(p->ticks_passed > p->numticks){  
+        //time pass reaches the interval, time to alarm
+        //set the instruction address to the alarm handler
+        p->trapframe->epc = p->alarm_handler;
+        //clear ticks passed, prepare for next round
+        p->ticks_passed = 0;
+      }
+    }
     yield();
+  }
+    
 
   usertrapret();
 }

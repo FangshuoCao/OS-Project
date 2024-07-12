@@ -110,4 +110,5 @@ struct proc {
   int numticks;
   uint64 alarm_handler;      //pointer to alarm handler
   int ticks_passed;              //number of ticks left before next alarm
+  struct trapframe *prev_trapframe;  //original trapframe before we call the handler
 };

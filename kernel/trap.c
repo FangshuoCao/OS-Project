@@ -82,7 +82,9 @@ usertrap(void)
     //lab4-3
     if(p->numticks > 0){  //if alarm is set
       p->ticks_passed++;  //one tick passed
-      if(p->ticks_passed > p->numticks){  
+      if(p->ticks_passed > p->numticks){
+        //save the original epc, thus we can restore it later
+        p->prev_trapframe = p->trapframe;
         //time pass reaches the interval, time to alarm
         //set the instruction address to the alarm handler
         p->trapframe->epc = p->alarm_handler;

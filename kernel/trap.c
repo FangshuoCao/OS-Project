@@ -85,9 +85,13 @@ usertrap(void)
       if((p->ticks_passed > p->numticks) && (p->running_handler == 0)){ //prevent from re-entering handler
         //save the original epc, thus we can restore it later
         p->prev_trapframe = p->trapframe;
+
         //time pass reaches the interval, time to alarm
         //set the instruction address to the alarm handler
         p->trapframe->epc = p->alarm_handler;
+
+        p->running_handler = 1; //prevent from re-entering handler
+        
         //clear ticks passed, prepare for next round
         p->ticks_passed = 0;
       }

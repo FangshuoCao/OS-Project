@@ -143,6 +143,7 @@ found:
 
   //lab4-3
   p->numticks = 0;
+  p->running_handler = 0;
 
   return p;
 }

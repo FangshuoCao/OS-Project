@@ -111,6 +111,7 @@ sys_sigalarm(void) {
   p->numticks = numticks;
   p->alarm_handler = handler;
   p->ticks_passed = 0;
+  p->running_handler = 1; //prevent from re-entering handler
   return 0;
 }
 
@@ -118,5 +119,6 @@ uint64
 sys_sigreturn(void) {
   struct proc *p = myproc();
   *p->trapframe = *p->prev_trapframe;
+  p->running_handler = 0;
 	return 0;
 }

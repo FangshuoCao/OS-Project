@@ -107,12 +107,11 @@ sys_sigalarm(void) {
     return -1;
   if(argaddr(1, &handler) < 0)
     return -1;
-  
   struct proc *p = myproc();
   p->numticks = numticks;
   p->alarm_handler = handler;
   p->ticks_passed = 0;
-
+  return 0;
 }
 
 uint64

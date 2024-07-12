@@ -99,7 +99,6 @@ usertrap(void)
     yield();
   }
     
-
   usertrapret();
 }
 

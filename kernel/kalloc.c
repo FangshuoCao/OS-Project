@@ -22,6 +22,8 @@ int pgrefcnt[NUMPAGES];
 //given a pa, return the cnt of references for that page
 #define PA2REFCNT(pa) pgrefcnt[PA2PGID((uint64)(pa))]
 
+struct spinlock pgreflock;
+
 
 
 void freerange(void *pa_start, void *pa_end);
@@ -42,6 +44,7 @@ void
 kinit()
 {
   initlock(&kmem.lock, "kmem");
+  initlock(&pgreflock, "pgref");
   freerange(end, (void*)PHYSTOP);
 }
 
@@ -68,6 +71,7 @@ kfree(void *pa)
 
   //lab5: decrease the reference by 1
   //only free the physical page if reference = 0
+  acquire(&pgreflock);
   if(--PA2REFCNT(pa) < 0){
     memset(pa, 1, PGSIZE);
 
@@ -78,6 +82,7 @@ kfree(void *pa)
     kmem.freelist = r;
     release(&kmem.lock);
   }
+  release(&pgreflock);
 }
 
 // Allocate one 4096-byte page of physical memory.
@@ -105,19 +110,24 @@ kalloc(void)
 
 void
 increase_refcnt(void *pa){
+  acquire(&pgreflock);
   PA2REFCNT(pa)++;
+  release(&pgreflock);
 }
 
 void *
 cowkalloc(void *pa)
 {
+  acquire(&pgreflock);
   //if reference cnt is 1, no need to allocate a new physical page
   if(PA2REFCNT(pa) <= 1){
+    release(&pgreflock);
     return pa;
   }
 
   uint64 new;
   if((new = (uint64)(kalloc())) == 0){  //kalloc failed, out of memory
+    release(&pgreflock);
     return 0;
   }
   //copy content of old page to new page
@@ -125,5 +135,6 @@ cowkalloc(void *pa)
   //decrease cnt of page reference for the old page
   PA2REFCNT(pa)--;
   
+  release(&pgreflock);
   return (void*)new;
 }

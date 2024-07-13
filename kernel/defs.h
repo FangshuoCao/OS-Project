@@ -173,6 +173,7 @@ int             copyout(pagetable_t, uint64, char *, uint64);
 int             copyin(pagetable_t, char *, uint64, uint64);
 int             copyinstr(pagetable_t, char *, uint64, uint64);
 int             cowuvmcopy(pagetable_t, uint64);
+int             iscowpage(pagetable_t, uint64);
 
 // plic.c
 void            plicinit(void);

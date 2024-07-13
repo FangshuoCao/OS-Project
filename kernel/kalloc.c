@@ -11,7 +11,7 @@
 
 //lab5
 //given a physical address, locate which page it is at
-#define PA2PGID(pa) ((pa)-KERNBASE/PGSIZE)
+#define PA2PGID(pa) (((pa)-KERNBASE)/PGSIZE)
 
 //total number of pages, also the ID of the last physical page
 #define NUMPAGES PA2PGID(PHYSTOP)
@@ -72,7 +72,7 @@ kfree(void *pa)
   //lab5: decrease the reference by 1
   //only free the physical page if reference = 0
   acquire(&pgreflock);
-  if(--PA2REFCNT(pa) < 0){
+  if(--PA2REFCNT(pa) <= 0){
     memset(pa, 1, PGSIZE);
 
     r = (struct run*)pa;

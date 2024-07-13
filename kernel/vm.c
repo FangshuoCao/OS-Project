@@ -346,7 +346,9 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
       panic("uvmcopy: page not present");
     pa = PTE2PA(*pte);
     //clear PTE_W, set PTE_COW
-    *pte = (*pte & ~PTE_W) | PTE_COW;
+    if(*pte & PTE_W) {
+      *pte = (*pte & ~PTE_W) | PTE_COW;
+    }
     flags = PTE_FLAGS(*pte);
 
     //delete the code for allocating new memory
@@ -392,6 +394,9 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
   uint64 n, va0, pa0;
 
   while(len > 0){
+    if(iscowpage(pagetable, dstva)){
+      cowuvmcopy(pagetable, dstva);
+    }
     va0 = PGROUNDDOWN(dstva);
     pa0 = walkaddr(pagetable, va0);
     if(pa0 == 0)
@@ -477,12 +482,22 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 }
 
 int
+iscowpage(pagetable_t pgtbl, uint64 va){
+  pte_t *pte;
+  return ((pte = walk(pgtbl, va, 0))!=0)
+    && (*pte & PTE_V)
+    && (*pte & PTE_COW);
+}
+
+int
 cowuvmcopy(pagetable_t pgtble, uint64 va){
   pte_t *pte;
   uint64 new;
   uint64 pa;
   
-  pte = walk(pgtble, va, 0);
+  if((pte = walk(pgtble, va, 0)) == 0){
+    panic("cowuvmcopy: walk");
+  }
   pa = PTE2PA(*pte);
 
   //allocate a new page
@@ -497,7 +512,9 @@ cowuvmcopy(pagetable_t pgtble, uint64 va){
   uvmunmap(pgtble, PGROUNDDOWN(va), 1, 0);
 
   //map va to the new page we just allocated
-  mappages(pgtble, va, 1, new, flags);
+  if(mappages(pgtble, va, 1, new, flags) == -1){
+    panic("cowuvmcopy: mappages");
+  }
 
   return 0;
 }

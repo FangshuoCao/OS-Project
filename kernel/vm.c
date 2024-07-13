@@ -5,6 +5,7 @@
 #include "riscv.h"
 #include "defs.h"
 #include "fs.h"
+#include "proc.h"
 
 /*
  * the kernel's page table.
@@ -297,6 +298,8 @@ uvmfree(pagetable_t pagetable, uint64 sz)
 // physical memory.
 // returns 0 on success, -1 on failure.
 // frees any allocated pages on failure.
+// original uvmcopy
+/*
 int
 uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
 {
@@ -319,6 +322,47 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
       kfree(mem);
       goto err;
     }
+  }
+  return 0;
+
+ err:
+  uvmunmap(new, 0, i / PGSIZE, 1);
+  return -1;
+}
+*/
+
+//lab5
+//step1: modify uvmcopy()
+int
+uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
+{
+  pte_t *pte;
+  uint64 pa, i;
+  uint flags;
+
+  for(i = 0; i < sz; i += PGSIZE){
+    if((pte = walk(old, i, 0)) == 0)
+      panic("uvmcopy: pte should exist");
+    if((*pte & PTE_V) == 0)
+      panic("uvmcopy: page not present");
+    pa = PTE2PA(*pte);
+    //clear PTE_W, set PTE_COW
+    *pte = (*pte & ~PTE_W) | PTE_COW;
+    flags = PTE_FLAGS(*pte);
+
+    //delete the code for allocating new memory
+    /*
+    if((mem = kalloc()) == 0)
+      goto err;
+    memmove(mem, (char*)pa, PGSIZE);
+    */
+
+    //directly map the child PTE to parent PTE
+    if(mappages(new, i, PGSIZE, pa, flags) != 0){
+      goto err;
+    }
+    //increase page reference cnt
+    increase_refcnt((void*)pa);
   }
   return 0;
 
@@ -431,4 +475,31 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
   } else {
     return -1;
   }
+}
+
+int
+cowuvmcopy(uint64 va){
+  pte_t *pte;
+  struct proc *p = myproc();
+  uint64 new;
+  uint64 pa;
+  
+  pte = walk(p->pagetable, va, 0);
+  pa = PTE2PA(*pte);
+
+  //allocate a new page
+  if(new = (uint64)cowkalloc((void*)pa) == 0){
+    return -1;
+  }
+
+  //set PTW_W, clear PTE_COW
+  uint64 flags = (PTE_FLAGS(*pte) | PTE_W) & ~PTE_COW;
+
+  //unmap va from the COW page
+  uvmunmap(p->pagetable, PGROUNDDOWN(va), 1, 0);
+
+  //map va to the new page we just allocated
+  mappages(p->pagetable, va, 1, new, flags);
+
+  return 0;
 }

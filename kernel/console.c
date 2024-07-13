@@ -178,6 +178,7 @@ consoleintr(int c)
   release(&cons.lock);
 }
 
+//called by xv6's main() to initialize the UART hardware
 void
 consoleinit(void)
 {

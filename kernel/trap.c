@@ -67,6 +67,14 @@ usertrap(void)
     syscall();
   } else if((which_dev = devintr()) != 0){
     // ok
+  } else if(r_scause == 13 || r_scause == 15){ //page fault
+    //lab5
+    //register stval stores the address of instruction that cause the trap
+    uint64 va = r_stval();
+    //allocate new page and copy to it the original content, set PTE_W
+    if(cowuvmcopy(va) == -1){
+      p->killed = 1;  //copy failed, kill current process
+    }
   } else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());

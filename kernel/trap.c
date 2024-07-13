@@ -67,7 +67,7 @@ usertrap(void)
     syscall();
   } else if((which_dev = devintr()) != 0){
     // ok
-  } else if(r_scause == 13 || r_scause == 15){ //page fault
+  } else if(r_scause() == 13 || r_scause() == 15){ //page fault
     //lab5
     //register stval stores the address of instruction that cause the trap
     uint64 va = r_stval();

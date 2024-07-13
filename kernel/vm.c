@@ -488,7 +488,7 @@ cowuvmcopy(uint64 va){
   pa = PTE2PA(*pte);
 
   //allocate a new page
-  if(new = (uint64)cowkalloc((void*)pa) == 0){
+  if((new = (uint64)cowkalloc((void*)pa)) == 0){
     return -1;
   }
 

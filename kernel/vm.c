@@ -477,13 +477,12 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 }
 
 int
-cowuvmcopy(uint64 va){
+cowuvmcopy(pagetable_t pgtble, uint64 va){
   pte_t *pte;
-  struct proc *p = myproc();
   uint64 new;
   uint64 pa;
   
-  pte = walk(p->pagetable, va, 0);
+  pte = walk(pgtble, va, 0);
   pa = PTE2PA(*pte);
 
   //allocate a new page
@@ -495,10 +494,10 @@ cowuvmcopy(uint64 va){
   uint64 flags = (PTE_FLAGS(*pte) | PTE_W) & ~PTE_COW;
 
   //unmap va from the COW page
-  uvmunmap(p->pagetable, PGROUNDDOWN(va), 1, 0);
+  uvmunmap(pgtble, PGROUNDDOWN(va), 1, 0);
 
   //map va to the new page we just allocated
-  mappages(p->pagetable, va, 1, new, flags);
+  mappages(pgtble, va, 1, new, flags);
 
   return 0;
 }

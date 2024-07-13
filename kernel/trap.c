@@ -71,8 +71,9 @@ usertrap(void)
     //lab5
     //register stval stores the address of instruction that cause the trap
     uint64 va = r_stval();
+    pagetable_t pgtbl = p->pagetable;
     //allocate new page and copy to it the original content, set PTE_W
-    if(cowuvmcopy(va) == -1){
+    if(cowuvmcopy(pgtbl, va) == -1){
       p->killed = 1;  //copy failed, kill current process
     }
   } else {

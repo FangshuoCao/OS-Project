@@ -68,11 +68,12 @@ usertrap(void)
   } else if((which_dev = devintr()) != 0){
     // ok
   } else if((r_scause() == 13 || r_scause() == 15) && iscowpage(p->pagetable, r_stval())){
-    //lab5
+    //excption 13 and 15 means page fault, and we check if this page fault
+    //is caused by a cow page
     //register stval stores the address of instruction that cause the trap
     //allocate new page and copy to it the original content, set PTE_W
     if(cowuvmcopy(p->pagetable, r_stval()) == -1){
-      p->killed = 1;  //copy failed, kill current process
+      p->killed = 1;  //if copy failed, kill current process
     }
   } else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);

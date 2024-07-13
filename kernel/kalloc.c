@@ -13,7 +13,7 @@
 //given a physical address, locate which page it is at
 #define PA2PGID(pa) (((pa)-KERNBASE)/PGSIZE)
 
-//total number of pages, also the ID of the last physical page
+//total number of pages, which is also the ID of the last physical page
 #define NUMPAGES PA2PGID(PHYSTOP)
 
 //an array to hold the cnt of references for each page
@@ -22,6 +22,7 @@ int pgrefcnt[NUMPAGES];
 //given a pa, return the cnt of references for that page
 #define PA2REFCNT(pa) pgrefcnt[PA2PGID((uint64)(pa))]
 
+//a lock to prevent race conditions
 struct spinlock pgreflock;
 
 
@@ -102,7 +103,7 @@ kalloc(void)
   if(r){
     memset((char*)r, 5, PGSIZE);
     
-    //lab5, initialize page reference
+    //lab5, initialize page reference cnt
     PA2REFCNT(r) = 1; 
   } 
   return (void*)r;

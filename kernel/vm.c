@@ -345,19 +345,10 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
     if((*pte & PTE_V) == 0)
       panic("uvmcopy: page not present");
     pa = PTE2PA(*pte);
+
     //clear PTE_W, set PTE_COW
-    if(*pte & PTE_W) {
-      *pte = (*pte & ~PTE_W) | PTE_COW;
-    }
+    *pte = (*pte & ~PTE_W) | PTE_COW;
     flags = PTE_FLAGS(*pte);
-
-    //delete the code for allocating new memory
-    /*
-    if((mem = kalloc()) == 0)
-      goto err;
-    memmove(mem, (char*)pa, PGSIZE);
-    */
-
     //directly map the child PTE to parent PTE
     if(mappages(new, i, PGSIZE, pa, flags) != 0){
       goto err;
@@ -394,6 +385,7 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
   uint64 n, va0, pa0;
 
   while(len > 0){
+    //lab5: if the page is a COW page, create a new physical page and copy it to that
     if(iscowpage(pagetable, dstva)){
       cowuvmcopy(pagetable, dstva);
     }
@@ -485,8 +477,8 @@ int
 iscowpage(pagetable_t pgtbl, uint64 va){
   pte_t *pte;
   return ((pte = walk(pgtbl, va, 0))!=0)
-    && (*pte & PTE_V)
-    && (*pte & PTE_COW);
+    && (*pte & PTE_V) //PTE is valid
+    && (*pte & PTE_COW);  //is a COW page
 }
 
 int
@@ -495,14 +487,12 @@ cowuvmcopy(pagetable_t pgtble, uint64 va){
   uint64 new;
   uint64 pa;
   
-  if((pte = walk(pgtble, va, 0)) == 0){
-    panic("cowuvmcopy: walk");
-  }
-  pa = PTE2PA(*pte);
+  pte = walk(pgtble, va, 0);
+  pa = PTE2PA(*pte);  //pa of the original faulting page
 
-  //allocate a new page
+  //allocate a new physical page
   if((new = (uint64)cowkalloc((void*)pa)) == 0){
-    return -1;
+    return -1;  //allocation failed
   }
 
   //set PTW_W, clear PTE_COW
@@ -511,10 +501,8 @@ cowuvmcopy(pagetable_t pgtble, uint64 va){
   //unmap va from the COW page
   uvmunmap(pgtble, PGROUNDDOWN(va), 1, 0);
 
-  //map va to the new page we just allocated
-  if(mappages(pgtble, va, 1, new, flags) == -1){
-    panic("cowuvmcopy: mappages");
-  }
+  //map va to the new physical page we just allocated
+  mappages(pgtble, va, 1, new, flags);
 
   return 0;
 }

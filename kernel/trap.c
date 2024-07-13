@@ -35,7 +35,7 @@ trapinithart(void)
 //
 void
 usertrap(void)
-{
+{//123
   int which_dev = 0;
 
   if((r_sstatus() & SSTATUS_SPP) != 0)

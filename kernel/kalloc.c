@@ -127,7 +127,7 @@ cowkalloc(void *pa)
   }
 
   uint64 new;
-  if(new = (uint64)(kalloc()) == 0){  //kalloc failed, out of memory
+  if((new = (uint64)(kalloc())) == 0){  //kalloc failed, out of memory
     release(&pgreflock);
     return 0;
   }

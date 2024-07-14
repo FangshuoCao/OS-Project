@@ -79,24 +79,27 @@ pipewrite(struct pipe *pi, uint64 addr, int n)
   int i = 0;
   struct proc *pr = myproc();
 
-  acquire(&pi->lock);
-  while(i < n){
+  acquire(&pi->lock); //acquire lock 
+
+  while(i < n){ //loop to read
     if(pi->readopen == 0 || pr->killed){
       release(&pi->lock);
       return -1;
     }
-    if(pi->nwrite == pi->nread + PIPESIZE){ //DOC: pipewrite-full
-      wakeup(&pi->nread);
-      sleep(&pi->nwrite, &pi->lock);
+    if(pi->nwrite == pi->nread + PIPESIZE){     //pipe is full
+      wakeup(&pi->nread);                       //wake up piperead
+      sleep(&pi->nwrite, &pi->lock);            //go to sleep
     } else {
-      char ch;
+      char ch;  //buffer
+      //copy data from user space to ch
       if(copyin(pr->pagetable, &ch, addr + i, 1) == -1)
         break;
-      pi->data[pi->nwrite++ % PIPESIZE] = ch;
+      pi->data[pi->nwrite++ % PIPESIZE] = ch;   //put ch in pipe
       i++;
     }
   }
-  wakeup(&pi->nread);
+  //all write finished
+  wakeup(&pi->nread); //go to sleep
   release(&pi->lock);
 
   return i;
@@ -107,7 +110,7 @@ piperead(struct pipe *pi, uint64 addr, int n)
 {
   int i;
   struct proc *pr = myproc();
-  char ch;
+  char ch;  //buffer
 
   acquire(&pi->lock);
   while(pi->nread == pi->nwrite && pi->writeopen){  //DOC: pipe-empty
@@ -115,16 +118,17 @@ piperead(struct pipe *pi, uint64 addr, int n)
       release(&pi->lock);
       return -1;
     }
-    sleep(&pi->nread, &pi->lock); //DOC: piperead-sleep
+    sleep(&pi->nread, &pi->lock); //go to sleep
   }
-  for(i = 0; i < n; i++){  //DOC: piperead-copy
-    if(pi->nread == pi->nwrite)
+  for(i = 0; i < n; i++){  //copy data out from the pipe
+    if(pi->nread == pi->nwrite) //pipe is empty
       break;
-    ch = pi->data[pi->nread++ % PIPESIZE];
+    ch = pi->data[pi->nread++ % PIPESIZE];  //copy from pipe to ch
+    //copyout to user space from ch
     if(copyout(pr->pagetable, addr + i, &ch, 1) == -1)
       break;
   }
-  wakeup(&pi->nwrite);  //DOC: piperead-wakeup
+  wakeup(&pi->nwrite);  //wake up pipewrite
   release(&pi->lock);
   return i;
 }

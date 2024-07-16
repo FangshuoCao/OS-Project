@@ -242,7 +242,7 @@ uvminit(pagetable_t pagetable, uchar *src, uint sz)
 }
 
 //lab5a
-uint64
+void
 uvmlazyalloc(uint64 faultva)
 {
   struct proc *p = myproc();
@@ -251,7 +251,6 @@ uvmlazyalloc(uint64 faultva)
   if((mem = kalloc()) == 0){
     printf("lazy: faild to allocate memory");
     p->killed = 1;  //kill process
-    return 0;
   }
   //basically copy from uvmalloc
   memset(mem, 0, PGSIZE); //fill new page with 0
@@ -260,7 +259,6 @@ uvmlazyalloc(uint64 faultva)
     printf("lazy: failed to map newly allocated page");
     kfree(mem); //frees the allocated memory
     p->killed = 1;  //kill process
-    return 0;
   }
 }
 

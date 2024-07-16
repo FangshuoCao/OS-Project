@@ -5,8 +5,9 @@
 #include "riscv.h"
 #include "defs.h"
 #include "fs.h"
-#include "proc.h"
 #include "spinlock.h"
+#include "proc.h"
+
 
 /*
  * the kernel's page table.

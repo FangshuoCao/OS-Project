@@ -173,6 +173,7 @@ int             copyinstr(pagetable_t, char *, uint64, uint64);
 void            vmprint(pagetable_t, uint64);
 int             accessed_page(pagetable_t, uint64);
 void            uvmlazyalloc(uint64);
+int             islazy(uint64);
 
 // plic.c
 void            plicinit(void);

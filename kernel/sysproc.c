@@ -44,12 +44,17 @@ sys_sbrk(void)
 {
   int addr;
   int n;
+  struct proc *p = myproc();
   if(argint(0, &n) < 0)
     return -1;
   //addr = myproc()->sz;
   //if(growproc(n) < 0)
     //return -1;
-  addr = myproc()->sz; //save old size
+  addr = p->sz; //save old size
+  //if we want process to shrink, deallocate
+  if(n < 0){
+    uvmdealloc(p->pagetable, p->sz, p->sz+n);
+  }
   myproc()->sz += n;  //increse process size
   return addr;
 }

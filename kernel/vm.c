@@ -400,7 +400,11 @@ int
 copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 {
   uint64 n, va0, pa0;
-
+  //lab5a
+  if(islazy(dstva)){
+    uvmlazyalloc(dstva);
+  }
+  
   while(len > 0){
     va0 = PGROUNDDOWN(dstva);
     pa0 = walkaddr(pagetable, va0);
@@ -425,6 +429,11 @@ int
 copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 {
   uint64 n, va0, pa0;
+
+  //lab5a
+  if(islazy(srcva)){
+    uvmlazyalloc(srcva);
+  }
 
   while(len > 0){
     va0 = PGROUNDDOWN(srcva);
@@ -531,4 +540,15 @@ accessed_page(pagetable_t pagetable, uint64 va){
     return 1;
   }
   return 0;  
+}
+
+int
+islazy(uint64 va){
+  pte_t *pte;
+  struct proc *p = myproc();
+
+  return va < p->sz //va in bound
+        &&PGROUNDDOWN(va) != r_sp() //not in guard page
+        &&(((pte = walk(p->pagetable, va, 0))==0) || ((*pte & PTE_V)==0)); 
+        //PTE does not exist
 }

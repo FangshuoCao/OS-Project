@@ -5,6 +5,8 @@
 #include "riscv.h"
 #include "defs.h"
 #include "fs.h"
+#include "proc.h"
+#include "spinlock.h"
 
 /*
  * the kernel's page table.
@@ -195,9 +197,11 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
 
   for(a = va; a < va + npages*PGSIZE; a += PGSIZE){
     if((pte = walk(pagetable, a, 0)) == 0)
-      panic("uvmunmap: walk");
+      //panic("uvmunmap: walk");
+      continue; //lab5a
     if((*pte & PTE_V) == 0)
-      panic("uvmunmap: not mapped");
+      //panic("uvmunmap: not mapped");
+      continue; //lab5a
     if(PTE_FLAGS(*pte) == PTE_V)
       panic("uvmunmap: not a leaf");
     if(do_free){
@@ -235,6 +239,29 @@ uvminit(pagetable_t pagetable, uchar *src, uint sz)
   memset(mem, 0, PGSIZE);
   mappages(pagetable, 0, PGSIZE, (uint64)mem, PTE_W|PTE_R|PTE_X|PTE_U);
   memmove(mem, src, sz);
+}
+
+//lab5a
+uint64
+uvmlazyalloc(uint64 faultva)
+{
+  struct proc *p = myproc();
+  pagetable_t pagetable = p->pagetable;
+  char *mem;
+  if((mem = kalloc()) == 0){
+    printf("lazy: faild to allocate memory");
+    p->killed = 1;  //kill process
+    return 0;
+  }
+  //basically copy from uvmalloc
+  memset(mem, 0, PGSIZE); //fill new page with 0
+  //map allocated physical memory to virtual address a
+  if(mappages(pagetable, PGROUNDDOWN(faultva), PGSIZE, (uint64)mem, PTE_W|PTE_X|PTE_R|PTE_U) != 0){
+    printf("lazy: failed to map newly allocated page");
+    kfree(mem); //frees the allocated memory
+    p->killed = 1;  //kill process
+    return 0;
+  }
 }
 
 // Allocate PTEs and physical memory to grow process from oldsz to

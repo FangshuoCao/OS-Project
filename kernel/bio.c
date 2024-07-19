@@ -24,7 +24,7 @@
 #include "buf.h"
 
 #define NBUCKET 13
-#define BUFHASH(dev, blockno) (((dev)^(blockno))%NBUCKET)
+#define BUFHASH(dev, blockno) ((((dev)<<27)|(blockno)) % NBUCKET)
 
 struct {
   struct buf buf[NBUF];

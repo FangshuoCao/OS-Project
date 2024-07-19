@@ -33,8 +33,8 @@
 // Contents of the header block, used for both the on-disk header block
 // and to keep track in memory of logged block# before commit.
 struct logheader {
-  int n;
-  int block[LOGSIZE];
+  int n;  //count of log blocks
+  int block[LOGSIZE]; //arr of sector numbers, one for each of the logged blocks
 };
 
 struct log {
@@ -219,17 +219,25 @@ log_write(struct buf *b)
   acquire(&log.lock);
   if (log.lh.n >= LOGSIZE || log.lh.n >= log.size - 1)
     panic("too big a transaction");
-  if (log.outstanding < 1)
+  if (log.outstanding < 1)  //transaction in progress
     panic("log_write outside of trans");
-
+  
+  // log absorption
+  /* when a block is written multiple times(maybe through multiple FS systam call)
+  during a single transaction, and allocates that block the same slot in the log*/
   for (i = 0; i < log.lh.n; i++) {
-    if (log.lh.block[i] == b->blockno)   // log absorption
+    //if block is already logged, it means that this is not the first time it is modified
+    if (log.lh.block[i] == b->blockno)
       break;
   }
+  //after the for loop, if the block is already logged(absorption), i is the
+  //number of that block
+  //if it is not logged(a newly modified block), i will be at the end of the array
   log.lh.block[i] = b->blockno;
-  if (i == log.lh.n) {  // Add new block to log?
-    bpin(b);
-    log.lh.n++;
+
+  if (i == log.lh.n) {  //this is a new modification
+    bpin(b);  //pin the block in the block cache(AKA buffer cache, our struct bcache)
+    log.lh.n++; //increase cnt of log blocks
   }
   release(&log.lock);
 }

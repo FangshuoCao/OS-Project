@@ -24,7 +24,7 @@
 #include "buf.h"
 
 struct {
-  struct spinlock lock;
+  struct spinlock lock; //protects information about which blocks are cached
   struct buf buf[NBUF];
 
   // Linked list of all buffers, through prev/next.
@@ -78,8 +78,8 @@ bget(uint dev, uint blockno)
     if(b->refcnt == 0) {
       b->dev = dev;
       b->blockno = blockno;
-      b->valid = 0;
-      b->refcnt = 1;
+      b->valid = 0; //tell bread to reaed from disk instead of using prev content
+      b->refcnt = 1;  //buffer in use
       release(&bcache.lock);
       acquiresleep(&b->lock);
       return b;
@@ -95,8 +95,8 @@ bread(uint dev, uint blockno)
   struct buf *b;
 
   b = bget(dev, blockno);
-  if(!b->valid) {
-    virtio_disk_rw(b, 0);
+  if(!b->valid) { //buffer needs to be read from disk
+    virtio_disk_rw(b, 0); //read from disk
     b->valid = 1;
   }
   return b;
@@ -123,8 +123,10 @@ brelse(struct buf *b)
 
   acquire(&bcache.lock);
   b->refcnt--;
-  if (b->refcnt == 0) {
-    // no one is waiting for it.
+
+  if (b->refcnt == 0) { // no one is waiting for it
+    //then move the buffer to the front of the list
+    //because this is a LRU list
     b->next->prev = b->prev;
     b->prev->next = b->next;
     b->next = bcache.head.next;

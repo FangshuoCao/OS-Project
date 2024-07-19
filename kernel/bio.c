@@ -145,7 +145,7 @@ bget(uint dev, uint blockno)
   return b;
 }
 
-// Return a locked buf with the contents of the indicated block.
+// Return a locked buf with the contents of the indicated block
 struct buf*
 bread(uint dev, uint blockno)
 {

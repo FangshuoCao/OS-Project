@@ -44,15 +44,13 @@ binit(void)
     bcache.bufmap[i].next = 0;
   }
   
-  //put each buffer into the appropriate bucket
-  for (int i = 0; i < NBUF; i++) {
-    b = &bcache.buf[i];
+  for(int i=0;i<NBUF;i++){
+    struct buf *b = &bcache.buf[i];
     initsleeplock(&b->lock, "buffer");
     b->lastuse = 0;
     b->refcnt = 0;
-    uint key = BUFHASH(b->dev, b->blockno);
-    b->next = bcache.bufmap[key].next;
-    bcache.bufmap[key].next = b;
+    b->next = bcache.bufmap[0].next;
+    bcache.bufmap[0].next = b;
   }
 
   initlock(&bcache.eviclock, "bcache_eviction");

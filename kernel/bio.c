@@ -37,7 +37,6 @@ struct {
 void
 binit(void)
 {
-  struct buf *b;
   //initialize lock per bucket
   for(int i = 0; i < NBUCKET; i++){
     initlock(&bcache.maplock[i], "bcache_maplock");

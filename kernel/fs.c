@@ -378,7 +378,7 @@ iunlockput(struct inode *ip)
 static uint
 bmap(struct inode *ip, uint bn)
 {
-  uint addr, *a;
+  uint addr, *a, *aa;
   struct buf *bp;
 
   //if bn is in the range of direct blocks
@@ -436,9 +436,9 @@ bmap(struct inode *ip, uint bn)
     //block number at the second level
     bn %= NINDIRECT;
     bp = bread(ip->dev, addr);
-    a = (uint*)bp->data;
-    if((addr = a[bn / NINDIRECT]) == 0){
-      a[bn/NINDIRECT] = addr = balloc(ip->dev);
+    aa = (uint*)bp->data;
+    if((addr = aa[bn / NINDIRECT]) == 0){
+      aa[bn/NINDIRECT] = addr = balloc(ip->dev);
       log_write(bp);
     }
     brelse(bp);
@@ -474,6 +474,26 @@ itrunc(struct inode *ip)
     }
     brelse(bp);
     bfree(ip->dev, ip->addrs[NDIRECT]);
+    ip->addrs[NDIRECT] = 0;
+  }
+
+  if(ip->addrs[NDIRECT+1]){
+    bp = bread(ip->dev, ip->addrs[NDIRECT+1]);
+    a = (uint*)bp->data;
+    for(j = 0; j < NINDIRECT; j++){
+      if(a[j]) {
+        struct buf *bp2 = bread(ip->dev, a[j]);
+        uint *aa = (uint*)bp2->data;
+        for(int k = 0; k < NINDIRECT; k++){
+          if(aa[k])
+            bfree(ip->dev, aa[k]);
+        }
+        brelse(bp2);
+        bfree(ip->dev, a[j]);
+      }
+    }
+    brelse(bp);
+    bfree(ip->dev, ip->addrs[NDIRECT+1]);
     ip->addrs[NDIRECT] = 0;
   }
 

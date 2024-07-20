@@ -378,7 +378,7 @@ iunlockput(struct inode *ip)
 static uint
 bmap(struct inode *ip, uint bn)
 {
-  uint addr, *a, *aa;
+  uint addr, *a;
   struct buf *bp;
 
   //if bn is in the range of direct blocks
@@ -418,6 +418,7 @@ bmap(struct inode *ip, uint bn)
   //lab-fs
   //bn is also not in singly indirect block, so minus again
   bn -= NINDIRECT;
+
   // Load doubly indirect block, allocating if necessary.
   if(bn < NINDIRECT * NINDIRECT){
     if((addr = ip->addrs[NDIRECT + 1]) == 0)
@@ -435,9 +436,9 @@ bmap(struct inode *ip, uint bn)
     //block number at the second level
     bn %= NINDIRECT;
     bp = bread(ip->dev, addr);
-    aa = (uint*)bp->data;
-    if((addr = aa[bn / NINDIRECT]) == 0){
-      aa[bn/NINDIRECT] = addr = balloc(ip->dev);
+    a = (uint*)bp->data;
+    if((addr = a[bn / NINDIRECT]) == 0){
+      a[bn/NINDIRECT] = addr = balloc(ip->dev);
       log_write(bp);
     }
     brelse(bp);

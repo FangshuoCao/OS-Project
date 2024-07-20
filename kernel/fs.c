@@ -437,8 +437,8 @@ bmap(struct inode *ip, uint bn)
     bn %= NINDIRECT;
     bp = bread(ip->dev, addr);
     aa = (uint*)bp->data;
-    if((addr = aa[bn / NINDIRECT]) == 0){
-      aa[bn/NINDIRECT] = addr = balloc(ip->dev);
+    if((addr = aa[bn]) == 0){
+      aa[bn] = addr = balloc(ip->dev);
       log_write(bp);
     }
     brelse(bp);
@@ -477,8 +477,8 @@ itrunc(struct inode *ip)
     ip->addrs[NDIRECT] = 0;
   }
 
-  if(ip->addrs[NDIRECT+1]){
-    bp = bread(ip->dev, ip->addrs[NDIRECT+1]);
+  if(ip->addrs[NDIRECT + 1]){
+    bp = bread(ip->dev, ip->addrs[NDIRECT + 1]);
     a = (uint*)bp->data;
     for(j = 0; j < NINDIRECT; j++){
       if(a[j]) {
@@ -493,7 +493,7 @@ itrunc(struct inode *ip)
       }
     }
     brelse(bp);
-    bfree(ip->dev, ip->addrs[NDIRECT+1]);
+    bfree(ip->dev, ip->addrs[NDIRECT + 1]);
     ip->addrs[NDIRECT] = 0;
   }
 

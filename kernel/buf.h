@@ -7,6 +7,6 @@ struct buf {
   uint refcnt;  //buffer in use?
   struct buf *prev; // LRU cache list
   struct buf *next;
-  uchar data[BSIZE];
+  uchar data[BSIZE];  //actual data in this block, uchar is 1 byte
 };
 

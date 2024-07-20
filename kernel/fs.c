@@ -372,35 +372,79 @@ iunlockput(struct inode *ip)
 // are listed in ip->addrs[].  The next NINDIRECT blocks are
 // listed in block ip->addrs[NDIRECT].
 
+// mapping a file(inode)'s logical block numbers into disk block numbers
 // Return the disk block address of the nth block in inode ip.
 // If there is no such block, bmap allocates one.
 static uint
 bmap(struct inode *ip, uint bn)
 {
-  uint addr, *a;
+  uint addr, *a, *aa;
   struct buf *bp;
 
+  //if bn is in the range of direct blocks
   if(bn < NDIRECT){
+    //if ip->addr[bn] is 0, then this block has not been allocated yet  
     if((addr = ip->addrs[bn]) == 0)
+      //allocate a new block and store its address in addrs[bn]
       ip->addrs[bn] = addr = balloc(ip->dev);
     return addr;
   }
-  bn -= NDIRECT;
 
+  //if we didnt return, bn is indirect
+  bn -= NDIRECT;  //which indirect number it is?
+
+  // Load singly indirect block, allocating if necessary.
   if(bn < NINDIRECT){
-    // Load indirect block, allocating if necessary.
-    if((addr = ip->addrs[NDIRECT]) == 0)
-      ip->addrs[NDIRECT] = addr = balloc(ip->dev);
-    bp = bread(ip->dev, addr);
+    if((addr = ip->addrs[NDIRECT]) == 0)  //if there's no indirect block
+      ip->addrs[NDIRECT] = addr = balloc(ip->dev);  //allocate an indirect block
+    bp = bread(ip->dev, addr);  //read block from disk
+
+    //bp->data is the actual data stored in the physical block
+    //a block is 1024 bytes
+    //original bp->data is uchar[BSIZE], note tha uchar is 1 byte
+    //this statement cast bp->data into uint[NINDIRECT], note that uint is 4 bytes
+    // 1 * 1024  ---> 4 * 256
+    //thus allow us to save block address in a
     a = (uint*)bp->data;
-    if((addr = a[bn]) == 0){
-      a[bn] = addr = balloc(ip->dev);
+
+    if((addr = a[bn]) == 0){  //data block is not allocated
+      a[bn] = addr = balloc(ip->dev); //allocate the data block
+      log_write(bp);  //write changes to log
+    }
+    brelse(bp); //bread returns a locked buffer, so we need to release the lock
+    return addr;
+  }
+
+  //lab-fs
+  //bn is also not in singly indirect block, so minus again
+  bn -= NINDIRECT;
+  // Load doubly indirect block, allocating if necessary.
+  if(bn < NINDIRECT * NINDIRECT){
+    if((addr = ip->addrs[NDIRECT + 1]) == 0)
+      ip->addrs[NDIRECT + 1] = addr = balloc(ip->dev);
+    bp = bread(ip->dev, addr);
+
+    a = (uint*)bp->data;
+    //bn/NINDIRECT is the block number at first level
+    if((addr = a[bn / NINDIRECT]) == 0){
+      a[bn/NINDIRECT] = addr = balloc(ip->dev);
+      log_write(bp);
+    }
+    brelse(bp);
+
+    //block number at the second level
+    bn %= NINDIRECT;
+    bp = bread(ip->dev, addr);
+    aa = (uint*)bp->data;
+    if((addr = aa[bn / NINDIRECT]) == 0){
+      aa[bn/NINDIRECT] = addr = balloc(ip->dev);
       log_write(bp);
     }
     brelse(bp);
     return addr;
   }
 
+  //if we still didn't return yet, it means bn > 268, out of range
   panic("bmap: out of range");
 }
 

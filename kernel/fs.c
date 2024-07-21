@@ -523,14 +523,21 @@ readi(struct inode *ip, int user_dst, uint64 dst, uint off, uint n)
   uint tot, m;
   struct buf *bp;
 
+  //if off is out of bound || off+n overflows
   if(off > ip->size || off + n < off)
     return 0;
+
+  //make sure dont read beyongd the end of file
+  //if off + n is out of bound, read until the end of file
   if(off + n > ip->size)
     n = ip->size - off;
 
+  //read total of tot bytes into des, read m bytes per iteration
   for(tot=0; tot<n; tot+=m, off+=m, dst+=m){
-    bp = bread(ip->dev, bmap(ip, off/BSIZE));
+    bp = bread(ip->dev, bmap(ip, off/BSIZE)); //read data from actual data block
+    //m is min("remaining bytes to read", "bytes left int the current data block")
     m = min(n - tot, BSIZE - off%BSIZE);
+    //copy to buffer in either user or kernel space, depends on user_dst
     if(either_copyout(user_dst, dst, bp->data + (off % BSIZE), m) == -1) {
       brelse(bp);
       tot = -1;
@@ -600,12 +607,17 @@ dirlookup(struct inode *dp, char *name, uint *poff)
   if(dp->type != T_DIR)
     panic("dirlookup not DIR");
 
+  //loop through the data blocks of the inode
+  //data blocks of an directory inode contains a sequence of struct dirent
   for(off = 0; off < dp->size; off += sizeof(de)){
+    //if failed to read a full dirent
     if(readi(dp, 0, (uint64)&de, off, sizeof(de)) != sizeof(de))
       panic("dirlookup read");
-    if(de.inum == 0)
+
+    if(de.inum == 0)  //free directory
       continue;
-    if(namecmp(name, de.name) == 0){
+
+    if(namecmp(name, de.name) == 0){  //found a matching directory
       // entry matches path element
       if(poff)
         *poff = off;
@@ -613,7 +625,6 @@ dirlookup(struct inode *dp, char *name, uint *poff)
       return iget(dp->dev, inum);
     }
   }
-
   return 0;
 }
 
@@ -667,20 +678,27 @@ skipelem(char *path, char *name)
   char *s;
   int len;
 
+  //skip leading slashes
   while(*path == '/')
     path++;
   if(*path == 0)
     return 0;
+
+  //find the end of the next path element  
   s = path;
   while(*path != '/' && *path != 0)
     path++;
   len = path - s;
+
+  //copy the element into name
   if(len >= DIRSIZ)
     memmove(name, s, DIRSIZ);
   else {
     memmove(name, s, len);
     name[len] = 0;
   }
+
+  //skip trailing slashes
   while(*path == '/')
     path++;
   return path;
@@ -695,29 +713,35 @@ namex(char *path, int nameiparent, char *name)
 {
   struct inode *ip, *next;
 
+  //start from root or current directory
   if(*path == '/')
-    ip = iget(ROOTDEV, ROOTINO);
+    ip = iget(ROOTDEV, ROOTINO);  //root inode
   else
-    ip = idup(myproc()->cwd);
+    ip = idup(myproc()->cwd); //current working directory
 
+  //extract each path component one by one
   while((path = skipelem(path, name)) != 0){
     ilock(ip);
+    //if current inode is not a directory, further path traversal cannot proceed
     if(ip->type != T_DIR){
       iunlockput(ip);
       return 0;
     }
+    //if namex is called from nameiparent and remaining path is empty
     if(nameiparent && *path == '\0'){
       // Stop one level early.
       iunlock(ip);
-      return ip;
+      return ip;  //return parent directory's inode
     }
+    //use dirlookup to find the inode of the current path component stored in name
     if((next = dirlookup(ip, name, 0)) == 0){
       iunlockput(ip);
       return 0;
     }
     iunlockput(ip);
-    ip = next;
+    ip = next;  //move to the next inode
   }
+
   if(nameiparent){
     iput(ip);
     return 0;

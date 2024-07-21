@@ -52,9 +52,8 @@ binit(void)
   }
 }
 
-// Look through buffer cache for block on device dev.
+// Look through buffer cache for block on device dev, return the locked buffer
 // If not found, allocate a buffer.
-// In either case, return locked buffer.
 static struct buf*
 bget(uint dev, uint blockno)
 {

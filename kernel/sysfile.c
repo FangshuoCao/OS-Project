@@ -115,7 +115,7 @@ sys_fstat(void)
   return filestat(f, st);
 }
 
-// Create the path new as a link to the same inode as old.
+// Create the path new as a link to the same inode as old.(a hard link)
 uint64
 sys_link(void)
 {
@@ -126,29 +126,35 @@ sys_link(void)
     return -1;
 
   begin_op();
-  if((ip = namei(old)) == 0){
+  if((ip = namei(old)) == 0){ //get the inode old points to
     end_op();
     return -1;
   }
 
   ilock(ip);
-  if(ip->type == T_DIR){
+  if(ip->type == T_DIR){  
     iunlockput(ip);
     end_op();
-    return -1;
+    return -1;  //hard link to directory is not allowed
   }
 
-  ip->nlink++;
-  iupdate(ip);
+  ip->nlink++;  //increment link count of inode
+  iupdate(ip);  //update inode on disk
   iunlock(ip);
 
   if((dp = nameiparent(new, name)) == 0)
     goto bad;
   ilock(dp);
+  //if nameiparent succeed:
+  //now dp is the parent directory of new
+  //name is the last element in path new
+
+  //create a new directory entry in dp that has the same inum as old
   if(dp->dev != ip->dev || dirlink(dp, name, ip->inum) < 0){
     iunlockput(dp);
     goto bad;
   }
+
   iunlockput(dp);
   iput(ip);
 
@@ -165,6 +171,12 @@ bad:
   return -1;
 }
 
+//lab9-symbolic links
+uint64
+sys_symlink(void)
+{
+  
+}
 // Is the directory dp empty except for "." and ".." ?
 static int
 isdirempty(struct inode *dp)

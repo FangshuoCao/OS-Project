@@ -175,8 +175,34 @@ bad:
 uint64
 sys_symlink(void)
 {
-  
+  char target[MAXPATH], path[MAXPATH];
+  struct inode *dp, *ip;
+
+  //get arguments from user space
+  if(argstr(0, target, MAXPATH) < 0 || argstr(1, path, MAXPATH) < 0)
+    return -1;
+
+  begin_op();
+
+  //unlike hardlink, symbolic link is another inode,
+  //so we need to create a new inode
+  if((ip = create(path, T_SYMLINK, 0, 0)) == 0){
+    end_op();
+    return -1;
+  }
+
+  //save target into the first data block
+  if(writei(ip, 0, (uint64)target, 0, strlen(target)) < 0) {
+    end_op();
+    return -1;
+  }
+
+  //create() returns an locked inode, so we need to unlock it
+  iunlockput(ip);
+  end_op();
+  return 0;
 }
+
 // Is the directory dp empty except for "." and ".." ?
 static int
 isdirempty(struct inode *dp)
@@ -316,6 +342,36 @@ sys_open(void)
       return -1;
     }
   } else {
+    
+    //lab9-symlink
+    int symlinkdepth = 0;
+    //follow symlink recursively until a non-symlink is reached
+    for(;;){
+      //extract next element in path
+      if((ip = namei(path)) == 0){
+        end_op();
+        return -1;
+      }
+      ilock(ip);
+      //inode is symlink, and O_NONFOLLOW is clear
+      if(ip->type == T_SYMLINK && (omode & O_NOFOLLOW) == 0) {
+        if(++symlinkdepth > 10) {
+          // too many layer of symlinks, might be a loop
+          iunlockput(ip);
+          end_op();
+          return -1;
+        }
+        if(readi(ip, 0, (uint64)path, 0, MAXPATH) < 0) {
+          iunlockput(ip);
+          end_op();
+          return -1;
+        }
+        iunlockput(ip);
+      } else {  //non symlink, break
+        break;
+      }
+    }
+
     if((ip = namei(path)) == 0){
       end_op();
       return -1;

@@ -186,7 +186,8 @@ sys_symlink(void)
 
   //unlike hardlink, symbolic link is another inode,
   //so we need to create a new inode
-  if((ip = create(path, T_SYMLINK, 0, 0)) == 0){
+  ip = create(path, T_SYMLINK, 0, 0);
+  if(ip == 0){
     end_op();
     return -1;
   }

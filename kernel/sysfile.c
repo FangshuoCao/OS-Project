@@ -171,39 +171,6 @@ bad:
   return -1;
 }
 
-//lab9-symbolic links
-uint64
-sys_symlink(void)
-{
-  char target[MAXPATH], path[MAXPATH];
-  struct inode *ip;
-
-  //get arguments from user space
-  if(argstr(0, target, MAXPATH) < 0 || argstr(1, path, MAXPATH) < 0)
-    return -1;
-
-  begin_op();
-
-  //unlike hardlink, symbolic link is another inode,
-  //so we need to create a new inode
-  ip = create(path, T_SYMLINK, 0, 0);
-  if(ip == 0){
-    end_op();
-    return -1;
-  }
-
-  //save target into the first data block
-  if(writei(ip, 0, (uint64)target, 0, strlen(target)) < 0) {
-    end_op();
-    return -1;
-  }
-
-  //create() returns an locked inode, so we need to unlock it
-  iunlockput(ip);
-  end_op();
-  return 0;
-}
-
 // Is the directory dp empty except for "." and ".." ?
 static int
 isdirempty(struct inode *dp)
@@ -320,6 +287,39 @@ create(char *path, short type, short major, short minor)
   iunlockput(dp);
 
   return ip;
+}
+
+//lab9-symbolic links
+uint64
+sys_symlink(void)
+{
+  char target[MAXPATH], path[MAXPATH];
+  struct inode *ip;
+
+  //get arguments from user space
+  if(argstr(0, target, MAXPATH) < 0 || argstr(1, path, MAXPATH) < 0)
+    return -1;
+
+  begin_op();
+
+  //unlike hardlink, symbolic link is another inode,
+  //so we need to create a new inode
+  ip = create(path, T_SYMLINK, 0, 0);
+  if(ip == 0){
+    end_op();
+    return -1;
+  }
+
+  //save target into the first data block
+  if(writei(ip, 0, (uint64)target, 0, strlen(target)) < 0) {
+    end_op();
+    return -1;
+  }
+
+  //create() returns an locked inode, so we need to unlock it
+  iunlockput(ip);
+  end_op();
+  return 0;
 }
 
 uint64

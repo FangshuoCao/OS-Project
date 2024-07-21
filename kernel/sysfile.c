@@ -343,7 +343,6 @@ sys_open(void)
       return -1;
     }
   } else {
-    
     //lab9-symlink
     int symlinkdepth = 0;
     //follow symlink recursively until a non-symlink is reached
@@ -373,11 +372,6 @@ sys_open(void)
       }
     }
 
-    if((ip = namei(path)) == 0){
-      end_op();
-      return -1;
-    }
-    ilock(ip);
     if(ip->type == T_DIR && omode != O_RDONLY){
       iunlockput(ip);
       end_op();

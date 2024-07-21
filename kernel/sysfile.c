@@ -176,7 +176,7 @@ uint64
 sys_symlink(void)
 {
   char target[MAXPATH], path[MAXPATH];
-  struct inode *dp, *ip;
+  struct inode *ip;
 
   //get arguments from user space
   if(argstr(0, target, MAXPATH) < 0 || argstr(1, path, MAXPATH) < 0)

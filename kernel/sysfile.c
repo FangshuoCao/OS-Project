@@ -371,6 +371,7 @@ sys_open(void)
         break;
       }
     }
+    //symlink code finished here
 
     if(ip->type == T_DIR && omode != O_RDONLY){
       iunlockput(ip);

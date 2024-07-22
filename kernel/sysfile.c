@@ -545,7 +545,7 @@ sys_munmap(void)
   struct proc *p = myproc();
 
   //get the vma to unmap
-  struct vma *v = findvma(p, addr);
+  struct vma *v = getvma(p, addr);
   if(v == 0) {
     return -1;
   }

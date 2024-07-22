@@ -12,6 +12,7 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "fs.h"
+#include "spinlock.h"
 #include "sleeplock.h"
 #include "file.h"
 #include "fcntl.h"

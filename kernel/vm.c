@@ -439,6 +439,47 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 }
 
 //lab10-mmap
+int
+vmaalloc(uint64 va)
+{
+  struct proc *p = myproc();
+
+  struct vma *v = getvma(p, va); //get the vma va is in
+  if(v == 0) {
+    return 0;
+  }
+
+  // allocate one physical page
+  void *pa = kalloc();
+  if(pa == 0) {
+    panic("vmaalloc: kalloc");
+  }
+  memset(pa, 0, PGSIZE);
+
+  //read the data from disk into the newly allocated page
+  begin_op();
+  ilock(v->f->ip);
+  readi(v->f->ip, 0, (uint64)pa, v->offset + PGROUNDDOWN(va - v->startaddr), PGSIZE);
+  iunlock(v->f->ip);
+  end_op();
+
+  //set permission for the page based on vma
+  int permission = PTE_U;
+  if(v->prot & PROT_READ)
+    permission |= PTE_R;
+  if(v->prot & PROT_WRITE)
+    permission |= PTE_W;
+  if(v->prot & PROT_EXEC)
+    permission |= PTE_X;
+
+  //map pages, create PTE
+   if(mappages(p->pagetable, va, PGSIZE, (uint64)pa, PTE_R | PTE_W | PTE_U) < 0) {
+    panic("vmaalloc: mappages");
+  }
+
+  return 1;
+}
+
 void
 vmaunmap(pagetable_t pagetable, uint64 va, uint64 n, struct vma *v)
 {

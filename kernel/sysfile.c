@@ -533,21 +533,6 @@ sys_mmap(void)
   return v->startaddr;
 }
 
-//given a process and a virtual address in that process
-//get the vma in which the address va is contained
-//if no such va, return 0
-struct vma*
-getvma(struct proc *p, uint64 va){
-  for(int i = 0; i < 16; i++){
-    struct vma *currv = &p->vmas[i];
-    if(currv->valid == 1 && va >= currv->startaddr 
-    && va < currv->startaddr + currv->sz) {
-      return currv;
-    }
-  }
-  return 0;
-}
-
 uint64
 sys_munmap(void)
 {

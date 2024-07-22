@@ -480,6 +480,21 @@ vmaalloc(uint64 va)
   return 1;
 }
 
+//given a process and a virtual address in that process
+//get the vma in which the address va is contained
+//if no such va, return 0
+struct vma*
+getvma(struct proc *p, uint64 va){
+  for(int i = 0; i < 16; i++){
+    struct vma *currv = &p->vmas[i];
+    if(currv->valid == 1 && va >= currv->startaddr 
+    && va < currv->startaddr + currv->sz) {
+      return currv;
+    }
+  }
+  return 0;
+}
+
 void
 vmaunmap(pagetable_t pagetable, uint64 va, uint64 n, struct vma *v)
 {

@@ -173,6 +173,7 @@ int             copyin(pagetable_t, char *, uint64, uint64);
 int             copyinstr(pagetable_t, char *, uint64, uint64);
 int             vmaalloc(uint64);
 void            vmaunmap(pagetable_t, uint64, uint64, struct vma *);
+struct vma *    getvma(struct proc *, uint64);
 
 // plic.c
 void            plicinit(void);
